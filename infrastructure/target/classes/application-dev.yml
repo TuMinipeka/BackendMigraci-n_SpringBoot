@@ -7,7 +7,7 @@ spring:
 
     jpa:
         hibernate:
-            ddl-auto: none
+            ddl-auto: create-drop
         show-sql: true
         properties:
             hibernate:
@@ -15,21 +15,11 @@ spring:
                 "[physucal_naming_strategy]": org.hibernate.boot.model.naming.PhysucalNamingStrategyStandartImpl
                 "[default_shema]": librarydb_schema
                 "[format_sql]": true
+                "[hbm2ddl.create_namespace]": true
+
     
     flyway:
-        enabled: true
-        locations: classpath:db/migration
-        create-schemas: true
-        init-sqls:
-            - CREATE SCHEMA IF NOT EXISTS librarydb_schema
-        schemas:
-            - librarydb_schema
-        default-schema: librarydb_schema
-        table: flyway_schema_history_librarydb
-        baseline-on-migrate: true
-        baseline-version: 0
-        placeholders:
-            db_schema: librarydb_schema
+        enabled: false
 
     queue:
         block-users: 
