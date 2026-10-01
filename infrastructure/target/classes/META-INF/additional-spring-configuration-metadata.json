@@ -1,0 +1,17 @@
+{"properties": [
+  {
+    "name": "spring.server.port",
+    "type": "java.lang.String",
+    "description": "A description for 'spring.server.port'"
+  },
+  {
+    "name": "spring.queue.block-users.fixed-delay-ms",
+    "type": "java.lang.String",
+    "description": "A description for 'spring.queue.block-users.fixed-delay-ms'"
+  },
+  {
+    "name": "spring.cors.allowed-origins",
+    "type": "java.lang.String",
+    "description": "A description for 'spring.cors.allowed-origins'"
+  }
+]}

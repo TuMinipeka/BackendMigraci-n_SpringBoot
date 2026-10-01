@@ -1,0 +1,8 @@
+spring:
+    application:
+        name: back-intro
+    profiles:
+        active: dev
+
+server:
+    port: 8081
