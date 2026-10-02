@@ -1,8 +1,8 @@
 spring:
-    application:
-        name: back-intro
-    profiles:
-        active: dev
+  application:
+    name: back-intro
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
 server:
-    port: 8081
+  port: ${SERVER_PORT:8081}
