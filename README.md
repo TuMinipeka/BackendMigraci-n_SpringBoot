@@ -4,9 +4,26 @@ Backend modular basado en principios de Domain-Driven Design (DDD), preparado
 para gestionar información clínica, pacientes, profesionales, encuentros,
 tratamientos y conversaciones asistidas por inteligencia artificial.
 
-El estado actual del proyecto se concentra en la infraestructura de base de
-datos: contiene 52 migraciones versionadas con Flyway que materializan el
-modelo relacional en PostgreSQL.
+El objetivo implementado actualmente es construir y versionar la estructura de
+PostgreSQL mediante **Flyway y scripts SQL**, sin utilizar JPA para crear tablas
+ni persistir información. El proyecto contiene 52 migraciones que materializan
+el modelo relacional completo.
+
+## Estado actual
+
+| Componente | Estado |
+| --- | --- |
+| Esquema PostgreSQL | Implementado con 52 tablas |
+| Migraciones Flyway | Implementadas desde `V1` hasta `V52` |
+| Restricciones, relaciones e índices | Implementados mediante SQL |
+| Entidades JPA | Aún no implementadas |
+| Repositorios Spring Data JPA | Aún no implementados |
+| Persistencia CRUD con Hibernate | Aún no implementada |
+| Datos iniciales o de prueba | No incluidos actualmente |
+
+Por tanto, el resultado actual es una base de datos estructuralmente completa,
+pero sus tablas permanecen vacías hasta que se implemente la persistencia o se
+agreguen migraciones de datos.
 
 ## Tecnologías
 
@@ -19,7 +36,9 @@ modelo relacional en PostgreSQL.
 | Flyway | 10.10.0 |
 | PostgreSQL | Probado con PostgreSQL 18 |
 
-También se utilizan Spring Web, Spring Data JPA, Hibernate Validator y HikariCP.
+Spring Data JPA está declarado como dependencia para una etapa posterior. En el
+estado actual, Flyway accede a PostgreSQL mediante JDBC y obtiene conexiones del
+pool HikariCP para ejecutar las migraciones.
 
 ## Arquitectura del proyecto
 
@@ -39,6 +58,38 @@ La clase de arranque se encuentra en:
 ```text
 infrastructure/src/main/java/com/backintro/infrastructure/MiappApplication.java
 ```
+
+## Flyway como objetivo principal
+
+Flyway es el componente responsable de crear, versionar y validar la estructura
+de la base de datos. Al iniciar Spring Boot realiza el siguiente proceso:
+
+```text
+Spring Boot inicia
+    ↓
+Flyway se conecta a PostgreSQL mediante JDBC/HikariCP
+    ↓
+Consulta flyway_schema_history_librarydb
+    ↓
+Detecta las versiones pendientes
+    ↓
+Ejecuta los archivos SQL en orden
+    ↓
+Registra cada resultado en el historial
+```
+
+Flyway creó directamente mediante SQL:
+
+- el esquema `librarydb_schema`;
+- las 52 tablas del modelo;
+- claves primarias y foráneas;
+- restricciones de unicidad y validación;
+- índices para las relaciones y consultas principales;
+- la tabla de control `flyway_schema_history_librarydb`.
+
+Flyway no inserta información clínica ni ejecuta operaciones CRUD durante el
+uso normal de la aplicación. Su responsabilidad es aplicar cambios controlados
+y reproducibles sobre la base de datos.
 
 ## Modelo de base de datos
 
@@ -68,6 +119,57 @@ Base de datos: librarydb
 Esquema: librarydb_schema
 Historial: librarydb_schema.flyway_schema_history_librarydb
 ```
+
+### Cómo evoluciona la base de datos
+
+Flyway no vuelve a ejecutar las migraciones que ya fueron aplicadas. Por
+ejemplo, un cambio futuro debe añadirse como una nueva versión:
+
+```sql
+-- V53__add_status_to_patients.sql
+ALTER TABLE ${db_schema}.patients
+ADD COLUMN status VARCHAR(20);
+```
+
+En el siguiente arranque, Flyway conservará `V1`–`V52` y ejecutará únicamente
+`V53`.
+
+## Estado de JPA e Hibernate
+
+Aunque `spring-boot-starter-data-jpa` está incluido en el módulo
+`infrastructure`, **JPA todavía no se utiliza para persistir datos**.
+
+Actualmente:
+
+- `EmpresaJpaEntity` no está anotada con `@Entity`;
+- `SpringDataEmpresaJpaRepository` no extiende `JpaRepository`;
+- `EmpresaRepositoryAdapter` no implementa operaciones de persistencia;
+- no existen consultas CRUD funcionales sobre las 52 tablas;
+- Hibernate no participó en la creación de la estructura.
+
+La propiedad configurada es:
+
+```yaml
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+```
+
+Esto impide que Hibernate cree o modifique tablas. Cuando se implementen las
+entidades JPA, Hibernate solo validará que sus mapeos coincidan con la estructura
+administrada por Flyway.
+
+La separación de responsabilidades prevista es:
+
+| Herramienta | Responsabilidad |
+| --- | --- |
+| Flyway | Crear y evolucionar el esquema con SQL versionado |
+| JPA | Definir el estándar de mapeo entre objetos y tablas |
+| Hibernate | Implementar JPA y ejecutar operaciones de persistencia |
+| Spring Data JPA | Proporcionar repositorios para los Aggregates |
+| HikariCP | Administrar y reutilizar conexiones JDBC |
+| PostgreSQL | Almacenar finalmente la estructura y los datos |
 
 ## Requisitos previos
 
@@ -142,7 +244,9 @@ mvn -pl infrastructure spring-boot:run
 ```
 
 Durante el arranque, Flyway valida el historial y aplica las migraciones
-pendientes. Una instalación completa debe terminar en la versión `52`.
+pendientes. Una instalación completa debe terminar en la versión `52`. Este
+arranque comprueba la infraestructura de migraciones; todavía no ejecuta casos
+de uso de persistencia mediante JPA.
 
 La aplicación inicia de forma predeterminada en:
 
